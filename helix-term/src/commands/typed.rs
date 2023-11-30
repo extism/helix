@@ -3090,6 +3090,13 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: move_buffer,
         signature: CommandSignature::positional(&[completers::filename]),
     },
+    TypableCommand {
+        name: "plugin",
+        aliases: &[],
+        doc: "Run Wasm plugins",
+        fun: crate::commands::plugin::cmd,
+        signature: CommandSignature::positional(&[completers::filename]),
+    },
 ];
 
 pub static TYPABLE_COMMAND_MAP: Lazy<HashMap<&'static str, &'static TypableCommand>> =

@@ -14,6 +14,7 @@ pub struct Config {
     pub theme: Option<String>,
     pub keys: HashMap<Mode, KeyTrie>,
     pub editor: helix_view::editor::Config,
+    pub plugins: HashMap<String, extism::Manifest>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -22,6 +23,7 @@ pub struct ConfigRaw {
     pub theme: Option<String>,
     pub keys: Option<HashMap<Mode, KeyTrie>>,
     pub editor: Option<toml::Value>,
+    pub plugins: HashMap<String, extism::Manifest>,
 }
 
 impl Default for Config {
@@ -30,6 +32,7 @@ impl Default for Config {
             theme: None,
             keys: keymap::default(),
             editor: helix_view::editor::Config::default(),
+            plugins: HashMap::default(),
         }
     }
 }
@@ -84,10 +87,14 @@ impl Config {
                         .map_err(ConfigLoadError::BadConfig)?,
                 };
 
+                let mut plugins = global.plugins.clone();
+                plugins.extend(local.plugins);
+
                 Config {
                     theme: local.theme.or(global.theme),
                     keys,
                     editor,
+                    plugins,
                 }
             }
             // if any configs are invalid return that first
@@ -107,6 +114,7 @@ impl Config {
                         || Ok(helix_view::editor::Config::default()),
                         |val| val.try_into().map_err(ConfigLoadError::BadConfig),
                     )?,
+                    plugins: config.plugins,
                 }
             }
 
