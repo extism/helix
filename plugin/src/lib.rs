@@ -1,4 +1,6 @@
-mod bindings;
+mod bindings {
+    include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+}
 
 extern crate extism_pdk;
 

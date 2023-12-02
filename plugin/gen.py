@@ -1,4 +1,5 @@
 import re
+import sys
 
 def fix_rust_type(t):
     t = t.strip()
@@ -8,6 +9,9 @@ def fix_rust_type(t):
         return "u64"
     return t
 
+def fix_rust_arg(i, t):
+    t = fix_rust_type(t)
+    return f"arg{i}: {t}"
 
 def fix_c_type(t):
     t = t.strip()
@@ -47,13 +51,13 @@ for (name, params, results) in x:
     results = list(filter(lambda x: len(x) > 0, results.split(',')))
     nresults = len(results)
     nparams = len(params)
-    rust_params = ', '.join(fix_rust_type(x) for x in params)
+    rust_params = ', '.join(fix_rust_arg(i, x) for (i, x) in enumerate(params))
     rust_results = ', '.join(fix_rust_type(x) for x in results)
     c_params = ', '.join(fix_c_type(x) for x in params)
     if nparams > 0:
         c_params = ", " + c_params
     c_results = ', '.join(fix_c_type(x) for x in results)
-    if nresults > 1:
+    if nresults > 1 or nresults == 0:
         rust_results = '(' + rust_results + ')'
     else:
         c_results = "void"
@@ -62,7 +66,7 @@ for (name, params, results) in x:
 
 rust_output += "}"
 
-with open("src/bindings.rs", 'w') as f:
+with open(sys.argv[1], 'w') as f:
     f.write(rust_output)
 with open("helix-plugin.h", 'w') as f:
     f.write(c_output)
