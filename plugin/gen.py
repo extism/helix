@@ -19,6 +19,8 @@ def fix_c_type(t):
         return "ExtismPointer"
     elif t == "extism::ValType::I64" or t == "ValType::I64":
         return "uint64_t"
+    elif t == '':
+        return 'void'
     return t
 
 with open("../helix-term/src/commands/plugin.rs") as f:
@@ -59,7 +61,8 @@ for (name, params, results) in x:
     c_results = ', '.join(fix_c_type(x) for x in results)
     if nresults > 1 or nresults == 0:
         rust_results = '(' + rust_results + ')'
-    else:
+
+    if nresults == 0:
         c_results = "void"
     rust_output += f"  pub fn {name}({rust_params}) -> {rust_results};\n"
     c_output += f"HELIX_HOST_FUNC({c_results}, {name}{c_params});\n"
