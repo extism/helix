@@ -342,7 +342,7 @@ pub(crate) fn cmd(
             "helix:editor/env",
             "selection_reset",
             [],
-            [/*extism::PTR*/],
+            [],
             user_data.clone(),
             |_plugin, _inputs, _outputs, user_data| {
                 let editor = user_data.get()?;
