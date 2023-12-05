@@ -463,29 +463,6 @@ pub(crate) fn cmd(
                     on_next_key_callback: None,
                     jobs,
                 };
-                let mut line: String = plugin.memory_get_val(&inputs[0])?;
-                line.insert(0, ':');
-                let cmd = crate::commands::MappableCommand::from_str(&line)?;
-                cmd.execute(&mut ctx);
-                Ok(())
-            },
-        )
-        .with_function_in_namespace(
-            EDITOR_ENV,
-            "execute_static",
-            [extism::PTR],
-            [],
-            user_data.clone(),
-            |plugin, inputs, _outputs, user_data| {
-                let (editor, jobs) = userdata!(user_data);
-                let mut ctx = Context {
-                    editor,
-                    register: None,
-                    count: None,
-                    callback: None,
-                    on_next_key_callback: None,
-                    jobs,
-                };
                 let line: String = plugin.memory_get_val(&inputs[0])?;
                 let cmd = crate::commands::MappableCommand::from_str(&line)?;
                 cmd.execute(&mut ctx);

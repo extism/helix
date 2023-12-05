@@ -159,14 +159,6 @@ impl Editor {
         Ok(())
     }
 
-    pub fn execute_static(&self, line: impl AsRef<str>) -> Result<(), extism_pdk::Error> {
-        let ptr = extism_pdk::Memory::new(&line.as_ref())?;
-        unsafe {
-            bindings::execute_static(ptr.offset());
-        }
-        Ok(())
-    }
-
     pub fn len_lines(&self) -> usize {
         unsafe { bindings::len_lines() as usize }
     }
@@ -180,12 +172,13 @@ impl Editor {
     }
 
     pub fn select_all(&self) -> Result<(), extism_pdk::Error> {
-        self.execute_static("select_all")
+        self.execute("select_all")
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Command {
+    typed: bool,
     args: Vec<String>,
 }
 
@@ -193,7 +186,20 @@ impl Command {
     pub fn new(name: impl Into<String>) -> Self {
         Command {
             args: vec![name.into()],
+            typed: false,
         }
+    }
+
+    pub fn new_typed(name: impl Into<String>) -> Self {
+        Command {
+            args: vec![name.into()],
+            typed: true,
+        }
+    }
+
+    pub fn typed(&mut self, t: bool) -> &mut Self {
+        self.typed = t;
+        self
     }
 
     pub fn arg(&mut self, arg: impl Into<String>) -> &mut Self {
@@ -209,7 +215,17 @@ impl Command {
     }
 
     pub fn execute(&mut self) -> Result<(), extism_pdk::Error> {
-        let cmd = self.args.join(" ");
+        let mut cmd = self.args[0].as_str().to_string();
+        if self.typed {
+            cmd.insert(0, ':');
+        }
+
+        for arg in &self.args[1..] {
+            cmd += " \"";
+            cmd += arg.as_str();
+            cmd += "\"";
+        }
+
         Editor.execute(&cmd)?;
         Ok(())
     }
