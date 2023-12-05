@@ -20,20 +20,40 @@ pub(crate) fn cmd(
     }
 
     ensure!(
-        args.len() >= 2,
-        ":ext takes at least 2 arguments: filename, function name"
+        !args.is_empty(),
+        ":plugin takes at least 1 argument specifying the plugin name and function name separated by a colon: plugin:function"
     );
     let user_data = extism::UserData::new(cx.editor as *mut Editor);
     let (_view, doc) = current!(cx.editor);
     let path = doc.path().and_then(|x| x.to_str()).unwrap_or_default();
-    let plugin = &args[0];
+    let (plugin, mut func) = if let Some((a, b)) = args[0].split_once(":") {
+        (a.into(), Some(b))
+    } else {
+        (args[0].clone(), None)
+    };
     let config = Config::load_default().map_err(|x| anyhow::Error::msg(x.to_string()))?;
     let manifest = match config.plugins.get(plugin.as_ref()) {
         None => extism::Manifest::new([extism::Wasm::file(plugin.as_ref())]),
-        Some(p) => p.clone(),
+        Some(p) => {
+            if let Some(functions) = &p.functions {
+                let functions: Vec<&str> = functions.iter().map(|x| x.as_str()).collect();
+                match func {
+                    None => {
+                        if functions.len() == 1 {
+                            func = functions[0].into();
+                        }
+                    }
+                    Some(f) => {
+                        if !functions.is_empty() && !functions.contains(&f) {
+                            anyhow::bail!("Invalid function name: {f}");
+                        }
+                    }
+                }
+            }
+            p.manifest.clone()
+        }
     };
-    let function_name = &args[1];
-    let rest = &args[2..];
+    let rest = &args[1..];
     let mut plugin = extism::PluginBuilder::new(manifest)
         .with_wasi(true)
         .with_function_in_namespace(
@@ -442,7 +462,7 @@ pub(crate) fn cmd(
         )
         .build()?;
     let res: anyhow::Result<()> = plugin.call(
-        function_name,
+        func.unwrap_or("_start"),
         extism::convert::Json(ExtInput {
             args: rest.into_iter().map(|x| x.to_string()).collect(),
             filename: PathBuf::from(path),

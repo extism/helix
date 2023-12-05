@@ -9,12 +9,20 @@ use std::fs;
 use std::io::Error as IOError;
 use toml::de::Error as TomlError;
 
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Plugin {
+    #[serde(flatten)]
+    pub manifest: extism::Manifest,
+    pub functions: Option<Vec<String>>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Config {
     pub theme: Option<String>,
     pub keys: HashMap<Mode, KeyTrie>,
     pub editor: helix_view::editor::Config,
-    pub plugins: HashMap<String, extism::Manifest>,
+    pub plugins: HashMap<String, Plugin>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -23,7 +31,7 @@ pub struct ConfigRaw {
     pub theme: Option<String>,
     pub keys: Option<HashMap<Mode, KeyTrie>>,
     pub editor: Option<toml::Value>,
-    pub plugins: HashMap<String, extism::Manifest>,
+    pub plugins: HashMap<String, Plugin>,
 }
 
 impl Default for Config {

@@ -318,7 +318,18 @@ pub mod completers {
             crate::config::Config::load_default()
                 .unwrap_or_default()
                 .plugins
-                .into_keys()
+                .into_iter()
+                .filter_map(|(k, v)| if v.functions.is_none() { Some(k) } else { None })
+                .collect()
+        });
+
+        static FUNCTIONS: Lazy<Vec<String>> = Lazy::new(|| {
+            crate::config::Config::load_default()
+                .unwrap_or_default()
+                .plugins
+                .into_iter()
+                .filter_map(|(k, x)| x.functions.map(|f| (k, f)))
+                .flat_map(move |(k, x)| x.into_iter().map(move |y| format!("{}:{}", k, y)))
                 .collect()
         });
 
@@ -326,6 +337,12 @@ pub mod completers {
             .into_iter()
             .map(|(name, _)| ((0..), name.into()))
             .collect();
+        completions.extend(
+            fuzzy_match(input, &*FUNCTIONS, false)
+                .into_iter()
+                .map(|(name, _)| ((0..), name.into()))
+                .collect::<Vec<_>>(),
+        );
         completions.extend(filename(editor, input));
         completions
     }
