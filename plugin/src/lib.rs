@@ -99,20 +99,16 @@ impl Editor {
         unsafe { bindings::focus_prev() }
     }
 
-    pub fn hsplit(self) {
-        unsafe { bindings::hsplit() }
-    }
-
-    pub fn vsplit(self) {
-        unsafe { bindings::vsplit() }
-    }
-
     pub fn clear_selection(self) {
         unsafe { bindings::selection_reset() }
     }
 
-    pub fn language_name(&self) -> &str {
-        unsafe { bindings::language_name() }
+    pub fn language_name(&self) -> Result<String, extism_pdk::Error> {
+        let ptr = unsafe { bindings::language_name() };
+        let ptr = extism_pdk::Memory::find(ptr).unwrap();
+        let res = ptr.to();
+        ptr.free();
+        res
     }
 
     pub fn insert_text(
@@ -153,6 +149,65 @@ impl Editor {
         unsafe {
             bindings::clear_status();
         }
+    }
+
+    pub fn execute(&self, line: impl AsRef<str>) -> Result<(), extism_pdk::Error> {
+        let ptr = extism_pdk::Memory::new(&line.as_ref())?;
+        unsafe {
+            bindings::execute(ptr.offset());
+        }
+        Ok(())
+    }
+
+    pub fn execute_static(&self, line: impl AsRef<str>) -> Result<(), extism_pdk::Error> {
+        let ptr = extism_pdk::Memory::new(&line.as_ref())?;
+        unsafe {
+            bindings::execute_static(ptr.offset());
+        }
+        Ok(())
+    }
+
+    pub fn len_lines(&self) -> usize {
+        unsafe { bindings::len_lines() as usize }
+    }
+
+    pub fn len_chars(&self) -> usize {
+        unsafe { bindings::len_chars() as usize }
+    }
+
+    pub fn len_bytes(&self) -> usize {
+        unsafe { bindings::len_bytes() as usize }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Command {
+    args: Vec<String>,
+}
+
+impl Command {
+    pub fn new(name: impl Into<String>) -> Self {
+        Command {
+            args: vec![name.into()],
+        }
+    }
+
+    pub fn arg(&mut self, arg: impl Into<String>) -> &mut Self {
+        self.args.push(arg.into());
+        self
+    }
+
+    pub fn args(&mut self, args: impl IntoIterator<Item = impl Into<String>>) -> &mut Self {
+        for arg in args {
+            self.args.push(arg.into());
+        }
+        self
+    }
+
+    pub fn execute(&mut self) -> Result<(), extism_pdk::Error> {
+        let cmd = self.args.join(" ");
+        Editor.execute(&cmd)?;
+        Ok(())
     }
 }
 

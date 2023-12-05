@@ -1,5 +1,7 @@
 use crate::config::Config;
 
+use std::str::FromStr;
+
 use super::*;
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -9,6 +11,17 @@ pub struct ExtInput {
 }
 
 const EDITOR_ENV: &str = "helix:editor/env";
+
+macro_rules! userdata {
+    ($x:expr) => {
+        unsafe {
+            let editor = $x.get()?;
+            let editor = editor.lock().unwrap();
+            let (a, b) = *editor;
+            (&mut *a, &mut *b)
+        }
+    };
+}
 
 pub(crate) fn cmd(
     cx: &mut compositor::Context,
@@ -23,7 +36,7 @@ pub(crate) fn cmd(
         !args.is_empty(),
         ":plugin takes at least 1 argument specifying the plugin name and function name separated by a colon: plugin:function"
     );
-    let user_data = extism::UserData::new(cx.editor as *mut Editor);
+    let user_data = extism::UserData::new((cx.editor as *mut Editor, cx.jobs as *mut Jobs));
     let (_view, doc) = current!(cx.editor);
     let path = doc.path().and_then(|x| x.to_str()).unwrap_or_default();
     let (plugin, mut func) = if let Some((a, b)) = args[0].split_once(":") {
@@ -63,9 +76,7 @@ pub(crate) fn cmd(
             [],
             user_data.clone(),
             |plugin, inputs, _outputs, user_data| {
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 let id = {
                     let (_view, doc) = current!(editor);
                     doc.id()
@@ -87,9 +98,7 @@ pub(crate) fn cmd(
             user_data.clone(),
             |plugin, inputs, _outputs, user_data| {
                 let status: &str = plugin.memory_get_val(&inputs[0])?;
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 editor.set_status(status.to_string());
                 Ok(())
             },
@@ -101,9 +110,7 @@ pub(crate) fn cmd(
             [],
             user_data.clone(),
             |_plugin, _inputs, _outputs, user_data| {
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 editor.clear_status();
                 Ok(())
             },
@@ -116,9 +123,7 @@ pub(crate) fn cmd(
             user_data.clone(),
             |plugin, inputs, _outputs, user_data| {
                 let path: &str = plugin.memory_get_val(&inputs[0])?;
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 let (_view, doc) = current!(editor);
                 doc.set_path(Some(path.as_ref()));
                 Ok(())
@@ -131,9 +136,7 @@ pub(crate) fn cmd(
             [],
             user_data.clone(),
             |_plugin, _inputs, _outputs, user_data| {
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 let (mut view, doc) = current!(editor);
                 doc.undo(&mut view);
                 Ok(())
@@ -146,9 +149,7 @@ pub(crate) fn cmd(
             [],
             user_data.clone(),
             |_plugin, _inputs, _outputs, user_data| {
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 let (mut view, doc) = current!(editor);
                 doc.redo(&mut view);
                 Ok(())
@@ -162,9 +163,7 @@ pub(crate) fn cmd(
             user_data.clone(),
             |plugin, inputs, _outputs, user_data| {
                 let path: &str = plugin.memory_get_val(&inputs[0])?;
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 let (path, pos) = args::parse_file(path);
                 let path = helix_core::path::expand_tilde(&path);
                 let _ = editor.open(&path, Action::Replace)?;
@@ -182,9 +181,7 @@ pub(crate) fn cmd(
             [],
             user_data.clone(),
             |_plugin, _inputs, _outputs, user_data| {
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 let id = {
                     let (_view, doc) = current!(editor);
                     doc.id()
@@ -197,42 +194,12 @@ pub(crate) fn cmd(
         )
         .with_function_in_namespace(
             EDITOR_ENV,
-            "vsplit",
-            [],
-            [],
-            user_data.clone(),
-            |_plugin, _inputs, _outputs, user_data| {
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
-                let _doc = editor.new_file(Action::VerticalSplit);
-                Ok(())
-            },
-        )
-        .with_function_in_namespace(
-            EDITOR_ENV,
-            "hsplit",
-            [],
-            [],
-            user_data.clone(),
-            |_plugin, _inputs, _outputs, user_data| {
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
-                editor.new_file(Action::HorizontalSplit);
-                Ok(())
-            },
-        )
-        .with_function_in_namespace(
-            EDITOR_ENV,
             "focus_next",
             [],
             [],
             user_data.clone(),
             |_plugin, _inputs, _outputs, user_data| {
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 editor.focus_next();
                 Ok(())
             },
@@ -244,9 +211,7 @@ pub(crate) fn cmd(
             [],
             user_data.clone(),
             |_plugin, _inputs, _outputs, user_data| {
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 editor.focus_prev();
                 Ok(())
             },
@@ -259,9 +224,7 @@ pub(crate) fn cmd(
             user_data.clone(),
             |plugin, inputs, _outputs, user_data| {
                 let text: &str = plugin.memory_get_val(&inputs[0])?;
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 let (view, doc) = current!(editor);
                 let sels = doc.selections();
                 let mut txn: Option<Transaction> = None;
@@ -293,9 +256,7 @@ pub(crate) fn cmd(
             user_data.clone(),
             |plugin, inputs, _outputs, user_data| {
                 let text: &str = plugin.memory_get_val(&inputs[0])?;
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 let (view, doc) = current!(editor);
                 let sels = doc.selections();
                 let mut txn: Option<Transaction> = None;
@@ -327,9 +288,7 @@ pub(crate) fn cmd(
             user_data.clone(),
             |plugin, inputs, _outputs, user_data| {
                 let text: &str = plugin.memory_get_val(&inputs[1])?;
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 let (view, doc) = current!(editor);
                 let sel = doc.selection(view.id);
                 let txn = Transaction::change_by_selection(doc.text(), &sel, |range| {
@@ -346,9 +305,7 @@ pub(crate) fn cmd(
             [extism::ValType::I64],
             user_data.clone(),
             |_plugin, inputs, outputs, user_data| {
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 let (view, doc) = current!(editor);
                 let sel = doc.selection(view.id).clone();
                 let a = inputs[0].unwrap_i64() as u64;
@@ -367,9 +324,7 @@ pub(crate) fn cmd(
             [],
             user_data.clone(),
             |_plugin, _inputs, _outputs, user_data| {
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 let (view, doc) = current!(editor);
                 doc.reset_selection(view.id);
                 Ok(())
@@ -382,9 +337,7 @@ pub(crate) fn cmd(
             [extism::ValType::I64],
             user_data.clone(),
             |_plugin, _inputs, outputs, user_data| {
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 let (view, doc) = current!(editor);
                 let sel = doc.selection(view.id);
                 outputs[0] = extism::Val::I64(sel.ranges().len() as i64);
@@ -398,9 +351,7 @@ pub(crate) fn cmd(
             [extism::ValType::I64],
             user_data.clone(),
             |_plugin, inputs, outputs, user_data| {
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 let (view, doc) = current!(editor);
                 let sel = doc.selection(view.id);
                 outputs[0] =
@@ -415,9 +366,7 @@ pub(crate) fn cmd(
             [extism::ValType::I64],
             user_data.clone(),
             |_plugin, inputs, outputs, user_data| {
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 let (view, doc) = current!(editor);
                 let sel = doc.selection(view.id);
                 outputs[0] =
@@ -432,9 +381,7 @@ pub(crate) fn cmd(
             [extism::PTR],
             user_data.clone(),
             |plugin, inputs, outputs, user_data| {
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 let range = Range::new(
                     inputs[0].unwrap_i64() as usize,
                     inputs[1].unwrap_i64() as usize,
@@ -447,16 +394,101 @@ pub(crate) fn cmd(
         )
         .with_function_in_namespace(
             EDITOR_ENV,
+            "len_chars",
+            [],
+            [extism::ValType::I64],
+            user_data.clone(),
+            |_plugin, _inputs, outputs, user_data| {
+                let (editor, _jobs) = userdata!(user_data);
+                let (_view, doc) = current!(editor);
+                let len = doc.text().len_chars();
+                outputs[0] = extism::Val::I64(len as i64);
+                Ok(())
+            },
+        )
+        .with_function_in_namespace(
+            EDITOR_ENV,
+            "len_bytes",
+            [],
+            [extism::ValType::I64],
+            user_data.clone(),
+            |_plugin, _inputs, outputs, user_data| {
+                let (editor, _jobs) = userdata!(user_data);
+                let (_view, doc) = current!(editor);
+                let len = doc.text().len_bytes();
+                outputs[0] = extism::Val::I64(len as i64);
+                Ok(())
+            },
+        )
+        .with_function_in_namespace(
+            EDITOR_ENV,
+            "len_lines",
+            [],
+            [extism::ValType::I64],
+            user_data.clone(),
+            |_plugin, _inputs, outputs, user_data| {
+                let (editor, _jobs) = userdata!(user_data);
+                let (_view, doc) = current!(editor);
+                let len = doc.text().len_lines();
+                outputs[0] = extism::Val::I64(len as i64);
+                Ok(())
+            },
+        )
+        .with_function_in_namespace(
+            EDITOR_ENV,
             "language_name",
             [],
             [extism::PTR],
             user_data.clone(),
             |plugin, _inputs, outputs, user_data| {
-                let editor = user_data.get()?;
-                let mut editor = editor.lock().unwrap();
-                let editor: &mut Editor = unsafe { &mut **editor };
+                let (editor, _jobs) = userdata!(user_data);
                 let (_view, doc) = current!(editor);
                 plugin.memory_set_val(&mut outputs[0], doc.language_name().unwrap_or_default())?;
+                Ok(())
+            },
+        )
+        .with_function_in_namespace(
+            EDITOR_ENV,
+            "execute",
+            [extism::PTR],
+            [],
+            user_data.clone(),
+            |plugin, inputs, _outputs, user_data| {
+                let (editor, jobs) = userdata!(user_data);
+                let mut ctx = Context {
+                    editor,
+                    register: None,
+                    count: None,
+                    callback: None,
+                    on_next_key_callback: None,
+                    jobs,
+                };
+                let mut line: String = plugin.memory_get_val(&inputs[0])?;
+                line.insert(0, ':');
+                let cmd = crate::commands::MappableCommand::from_str(&line)?;
+                cmd.execute(&mut ctx);
+                Ok(())
+            },
+        )
+        .with_function_in_namespace(
+            EDITOR_ENV,
+            "execute_static",
+            [extism::PTR],
+            [],
+            user_data.clone(),
+            |plugin, inputs, _outputs, user_data| {
+                let (editor, jobs) = userdata!(user_data);
+                let mut ctx = Context {
+                    editor,
+                    register: None,
+                    count: None,
+                    callback: None,
+                    on_next_key_callback: None,
+                    jobs,
+                };
+                let line: String = plugin.memory_get_val(&inputs[0])?;
+                let cmd = crate::commands::MappableCommand::from_str(&line)?;
+                cmd.execute(&mut ctx);
                 Ok(())
             },
         )

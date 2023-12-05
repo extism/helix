@@ -10,3 +10,4 @@ edition = "2021"
 
 [dependencies]
 extism-pdk = { path =  "../../rust-pdk" } # "https://github.com/extism/rust-pdk"
+serde = { version = "1.0.193", features = ["derive"] }
