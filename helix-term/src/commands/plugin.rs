@@ -462,7 +462,7 @@ pub(crate) fn cmd(
         )
         .build()?;
     let res: anyhow::Result<()> = plugin.call(
-        func.unwrap_or("_start"),
+        func.unwrap_or("_start").replace("-", "_"),
         extism::convert::Json(ExtInput {
             args: rest.into_iter().map(|x| x.to_string()).collect(),
             filename: PathBuf::from(path),
