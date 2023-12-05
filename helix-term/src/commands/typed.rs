@@ -3092,7 +3092,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "plugin",
-        aliases: &[],
+        aliases: &["pi"],
         doc: "Run Wasm plugins",
         fun: crate::commands::plugin::cmd,
         signature: CommandSignature::positional(&[completers::plugin]),
