@@ -3095,7 +3095,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Run Wasm plugins",
         fun: crate::commands::plugin::cmd,
-        signature: CommandSignature::positional(&[completers::filename]),
+        signature: CommandSignature::positional(&[completers::plugin]),
     },
 ];
 

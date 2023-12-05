@@ -111,6 +111,10 @@ impl Editor {
         unsafe { bindings::selection_reset() }
     }
 
+    pub fn language_name(&self) -> &str {
+        unsafe { bindings::language_name() }
+    }
+
     pub fn insert_text(
         self,
         text: impl AsRef<str>,

@@ -313,6 +313,23 @@ pub mod completers {
             .collect()
     }
 
+    pub fn plugin(editor: &Editor, input: &str) -> Vec<Completion> {
+        static KEYS: Lazy<Vec<String>> = Lazy::new(|| {
+            crate::config::Config::load_default()
+                .unwrap_or_default()
+                .plugins
+                .into_keys()
+                .collect()
+        });
+
+        let mut completions: Vec<Completion> = fuzzy_match(input, &*KEYS, false)
+            .into_iter()
+            .map(|(name, _)| ((0..), name.into()))
+            .collect();
+        completions.extend(filename(editor, input));
+        completions
+    }
+
     pub fn filename(editor: &Editor, input: &str) -> Vec<Completion> {
         filename_with_git_ignore(editor, input, true)
     }

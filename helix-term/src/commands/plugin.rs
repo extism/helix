@@ -5,8 +5,10 @@ use super::*;
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct ExtInput {
     args: Vec<String>,
-    filename: String,
+    filename: std::path::PathBuf,
 }
+
+const EDITOR_ENV: &str = "helix:editor/env";
 
 pub(crate) fn cmd(
     cx: &mut compositor::Context,
@@ -35,7 +37,7 @@ pub(crate) fn cmd(
     let mut plugin = extism::PluginBuilder::new(manifest)
         .with_wasi(true)
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "save",
             [extism::PTR],
             [],
@@ -58,7 +60,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "set_status",
             [extism::PTR],
             [],
@@ -73,7 +75,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "clear_status",
             [],
             [],
@@ -87,7 +89,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "set_path",
             [extism::PTR],
             [],
@@ -103,7 +105,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "undo",
             [],
             [],
@@ -118,7 +120,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "redo",
             [],
             [],
@@ -133,7 +135,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "open",
             [extism::PTR],
             [],
@@ -154,7 +156,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "close",
             [],
             [],
@@ -174,7 +176,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "vsplit",
             [],
             [],
@@ -188,7 +190,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "hsplit",
             [],
             [],
@@ -202,7 +204,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "focus_next",
             [],
             [],
@@ -216,7 +218,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "focus_prev",
             [],
             [],
@@ -230,7 +232,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "selection_insert_text_after",
             [extism::PTR],
             [],
@@ -264,7 +266,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "selection_insert_text_before",
             [extism::PTR],
             [],
@@ -298,7 +300,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "selection_replace_text",
             [extism::PTR],
             [],
@@ -318,7 +320,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "selection_add",
             [extism::ValType::I64, extism::ValType::I64],
             [extism::ValType::I64],
@@ -339,7 +341,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "selection_reset",
             [],
             [],
@@ -354,7 +356,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "selection_count",
             [],
             [extism::ValType::I64],
@@ -370,7 +372,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "selection_begin",
             [extism::ValType::I64],
             [extism::ValType::I64],
@@ -387,7 +389,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "selection_end",
             [extism::ValType::I64],
             [extism::ValType::I64],
@@ -404,7 +406,7 @@ pub(crate) fn cmd(
             },
         )
         .with_function_in_namespace(
-            "helix:editor/env",
+            EDITOR_ENV,
             "text",
             [extism::ValType::I64, extism::ValType::I64],
             [extism::PTR],
@@ -420,7 +422,21 @@ pub(crate) fn cmd(
                 let (_view, doc) = current!(editor);
                 let s = range.slice(doc.text().slice(..)).to_string();
                 plugin.memory_set_val(&mut outputs[0], &s)?;
-                editor.set_status(s);
+                Ok(())
+            },
+        )
+        .with_function_in_namespace(
+            EDITOR_ENV,
+            "language_name",
+            [],
+            [extism::PTR],
+            user_data.clone(),
+            |plugin, _inputs, outputs, user_data| {
+                let editor = user_data.get()?;
+                let mut editor = editor.lock().unwrap();
+                let editor: &mut Editor = unsafe { &mut **editor };
+                let (_view, doc) = current!(editor);
+                plugin.memory_set_val(&mut outputs[0], doc.language_name().unwrap_or_default())?;
                 Ok(())
             },
         )
@@ -429,7 +445,7 @@ pub(crate) fn cmd(
         function_name,
         extism::convert::Json(ExtInput {
             args: rest.into_iter().map(|x| x.to_string()).collect(),
-            filename: path.to_string(),
+            filename: PathBuf::from(path),
         }),
     );
 

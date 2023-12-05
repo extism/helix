@@ -28,3 +28,4 @@ HELIX_HOST_FUNC(uint64_t, selection_count);
 HELIX_HOST_FUNC(uint64_t, selection_begin, uint64_t);
 HELIX_HOST_FUNC(uint64_t, selection_end, uint64_t);
 HELIX_HOST_FUNC(ExtismPointer, text, uint64_t, uint64_t);
+HELIX_HOST_FUNC(ExtismPointer, language_name, uint64_t, uint64_t);
