@@ -178,6 +178,10 @@ impl Editor {
     pub fn len_bytes(&self) -> usize {
         unsafe { bindings::len_bytes() as usize }
     }
+
+    pub fn select_all(&self) -> Result<(), extism_pdk::Error> {
+        self.execute_static("select_all")
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]

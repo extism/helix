@@ -9,6 +9,7 @@ pub fn vsplit_sel() -> FnResult<()> {
     Editor.execute("vsplit-new")?;
     Editor.add_selection(0, 0);
     Editor.insert_text(&txt, Insert::BeforeSelection)?;
+    Editor.select_all()?;
     Ok(())
 }
 
