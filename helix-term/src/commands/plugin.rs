@@ -44,7 +44,11 @@ pub(crate) fn cmd(
     } else {
         (args[0].clone(), None)
     };
-    let config = Config::load_default().map_err(|x| anyhow::Error::msg(x.to_string()))?;
+    let config = Lazy::new(|| {
+        Config::load_default()
+            .map_err(|x| anyhow::Error::msg(x.to_string()))
+            .unwrap()
+    });
     let manifest = match config.plugins.get(plugin.as_ref()) {
         None => extism::Manifest::new([extism::Wasm::file(plugin.as_ref())]),
         Some(p) => {
@@ -478,8 +482,13 @@ pub(crate) fn cmd(
         }),
     );
 
-    if let Err(e) = &res {
-        let _ = std::fs::write("error.txt", e.to_string());
+    if let Ok(mut f) = std::env::var("EXTISM_HELIX_SAVE_ERROR") {
+        if f.is_empty() || f == "1" {
+            f = "error.txt".to_string();
+        }
+        if let Err(e) = &res {
+            let _ = std::fs::write(f, e.to_string());
+        }
     }
 
     res?;
