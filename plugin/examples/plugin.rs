@@ -19,6 +19,7 @@ pub fn open_sel() -> FnResult<()> {
         let txt = sel.text()?;
         Editor.execute(":vsplit-new")?;
         Editor.open(&txt)?;
+        Editor.focus_prev();
     }
     Ok(())
 }
