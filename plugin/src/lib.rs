@@ -4,24 +4,49 @@ mod bindings {
 
 extern crate extism_pdk;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Default, Clone, Copy, Debug)]
 pub struct Editor;
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord)]
-pub struct Selection(u64);
+pub struct Selection(View, u64);
+
+pub use bindings::View;
+
+pub struct Focus(View, View);
+
+impl Focus {
+    pub fn new(view: View) -> Focus {
+        let old = Editor.view();
+        Editor.focus(view);
+        Focus(old, view)
+    }
+
+    pub fn focus(&self) {
+        Editor.focus(self.1);
+    }
+}
+
+impl Drop for Focus {
+    fn drop(&mut self) {
+        Editor.focus(self.0)
+    }
+}
 
 impl Selection {
     pub fn from(self) -> usize {
-        unsafe { bindings::selection_begin(self.0) as usize }
+        let _focus = Focus::new(self.0);
+        unsafe { bindings::selection_begin(self.1) as usize }
     }
 
     pub fn to(self) -> usize {
-        unsafe { bindings::selection_end(self.0) as usize }
+        let _focus = Focus::new(self.0);
+        unsafe { bindings::selection_end(self.1) as usize }
     }
 
     pub fn text(&self) -> Result<String, extism_pdk::Error> {
-        let from = self.from();
-        let to = self.to();
+        let _focus = Focus::new(self.0);
+        let from = unsafe { bindings::selection_begin(self.1) as usize };
+        let to = unsafe { bindings::selection_end(self.1) as usize };
         let ptr = unsafe { bindings::text(from as u64, to as u64) };
         let ptr = extism_pdk::Memory::find(ptr).unwrap();
         let res = ptr.to();
@@ -31,18 +56,23 @@ impl Selection {
 }
 
 impl Editor {
+    pub fn new() -> Editor {
+        Editor::default()
+    }
+
     pub fn add_selection(self, start: usize, end: usize) -> Selection {
         let n = unsafe { bindings::selection_add(start as u64, end as u64) };
-        Selection(n)
+        Selection(self.view(), n)
     }
 
     pub fn selections(self) -> impl Iterator<Item = Selection> {
         let len = unsafe { bindings::selection_count() };
 
         let mut n = 0;
+        let view = self.view();
         std::iter::from_fn(move || {
             if n < len {
-                let x = Selection(n);
+                let x = Selection(view, n);
                 n += 1;
                 return Some(x);
             }
@@ -91,6 +121,14 @@ impl Editor {
         unsafe { bindings::redo() }
     }
 
+    pub fn view(self) -> View {
+        unsafe { bindings::view_id() }
+    }
+
+    pub fn focus(self, view: View) {
+        unsafe { bindings::focus(view) }
+    }
+
     pub fn focus_next(self) {
         unsafe { bindings::focus_next() }
     }
@@ -103,7 +141,7 @@ impl Editor {
         unsafe { bindings::selection_reset() }
     }
 
-    pub fn language_name(&self) -> Result<String, extism_pdk::Error> {
+    pub fn language_name(self) -> Result<String, extism_pdk::Error> {
         let ptr = unsafe { bindings::language_name() };
         let ptr = extism_pdk::Memory::find(ptr).unwrap();
         let res = ptr.to();
@@ -129,7 +167,7 @@ impl Editor {
         Ok(())
     }
 
-    pub fn replace_text(&self, txt: impl AsRef<str>) -> Result<(), extism_pdk::Error> {
+    pub fn replace_text(self, txt: impl AsRef<str>) -> Result<(), extism_pdk::Error> {
         let ptr = extism_pdk::Memory::new(&txt.as_ref())?;
         unsafe { bindings::selection_replace_text(ptr.offset()) };
         ptr.free();
@@ -151,7 +189,7 @@ impl Editor {
         }
     }
 
-    pub fn execute(&self, line: impl AsRef<str>) -> Result<(), extism_pdk::Error> {
+    pub fn execute(self, line: impl AsRef<str>) -> Result<(), extism_pdk::Error> {
         let ptr = extism_pdk::Memory::new(&line.as_ref())?;
         unsafe {
             bindings::execute(ptr.offset());
@@ -159,19 +197,19 @@ impl Editor {
         Ok(())
     }
 
-    pub fn len_lines(&self) -> usize {
+    pub fn len_lines(self) -> usize {
         unsafe { bindings::len_lines() as usize }
     }
 
-    pub fn len_chars(&self) -> usize {
+    pub fn len_chars(self) -> usize {
         unsafe { bindings::len_chars() as usize }
     }
 
-    pub fn len_bytes(&self) -> usize {
+    pub fn len_bytes(self) -> usize {
         unsafe { bindings::len_bytes() as usize }
     }
 
-    pub fn select_all(&self) -> Result<(), extism_pdk::Error> {
+    pub fn select_all(self) -> Result<(), extism_pdk::Error> {
         self.execute("select_all")
     }
 }

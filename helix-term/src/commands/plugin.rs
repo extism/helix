@@ -23,6 +23,9 @@ macro_rules! userdata {
     };
 }
 
+// const DOC_ID: extism::ValType = extism::ValType::I64;
+const VIEW_ID: extism::ValType = extism::ValType::I64;
+
 pub(crate) fn cmd(
     cx: &mut compositor::Context,
     args: &[Cow<str>],
@@ -198,6 +201,20 @@ pub(crate) fn cmd(
         )
         .with_function_in_namespace(
             EDITOR_ENV,
+            "focus",
+            [VIEW_ID],
+            [],
+            user_data.clone(),
+            |_plugin, inputs, _outputs, user_data| {
+                let (editor, _jobs) = userdata!(user_data);
+                editor.focus(ViewId::from(slotmap::KeyData::from_ffi(
+                    inputs[0].unwrap_i64() as u64,
+                )));
+                Ok(())
+            },
+        )
+        .with_function_in_namespace(
+            EDITOR_ENV,
             "focus_next",
             [],
             [],
@@ -217,6 +234,20 @@ pub(crate) fn cmd(
             |_plugin, _inputs, _outputs, user_data| {
                 let (editor, _jobs) = userdata!(user_data);
                 editor.focus_prev();
+                Ok(())
+            },
+        )
+        .with_function_in_namespace(
+            EDITOR_ENV,
+            "view_id",
+            [],
+            [VIEW_ID],
+            user_data.clone(),
+            |_plugin, _inputs, outputs, user_data| {
+                use slotmap::Key;
+                let (editor, _jobs) = userdata!(user_data);
+                let (view, _doc) = current!(editor);
+                outputs[0] = extism::Val::I64(view.id.data().as_ffi() as i64);
                 Ok(())
             },
         )
