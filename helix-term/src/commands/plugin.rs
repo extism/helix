@@ -23,7 +23,6 @@ macro_rules! userdata {
     };
 }
 
-// const DOC_ID: extism::ValType = extism::ValType::I64;
 const VIEW_ID: extism::ValType = extism::ValType::I64;
 
 pub(crate) fn cmd(
@@ -84,10 +83,8 @@ pub(crate) fn cmd(
             user_data.clone(),
             |plugin, inputs, _outputs, user_data| {
                 let (editor, _jobs) = userdata!(user_data);
-                let id = {
-                    let (_view, doc) = current!(editor);
-                    doc.id()
-                };
+                let doc = doc!(editor);
+                let id = doc.id();
                 let p = if inputs[0].unwrap_i64() != 0 {
                     Some(plugin.memory_get_val::<&str>(&inputs[0])?)
                 } else {
@@ -189,10 +186,8 @@ pub(crate) fn cmd(
             user_data.clone(),
             |_plugin, _inputs, _outputs, user_data| {
                 let (editor, _jobs) = userdata!(user_data);
-                let id = {
-                    let (_view, doc) = current!(editor);
-                    doc.id()
-                };
+                let (_view, doc) = current!(editor);
+                let id = doc.id();
                 editor
                     .close_document(id, true)
                     .map_err(|_| anyhow::Error::msg("close failed"))?;
@@ -389,9 +384,13 @@ pub(crate) fn cmd(
                 let (editor, _jobs) = userdata!(user_data);
                 let (view, doc) = current!(editor);
                 let sel = doc.selection(view.id);
-                outputs[0] =
-                    extism::Val::I64(sel.ranges()[inputs[0].unwrap_i64() as usize].from() as i64);
-                Ok(())
+                let index = inputs[0].unwrap_i64() as usize;
+                if let Some(x) = sel.ranges().get(index) {
+                    outputs[0] = extism::Val::I64(x.from() as i64);
+                    Ok(())
+                } else {
+                    anyhow::bail!("Invalid selection: {index}");
+                }
             },
         )
         .with_function_in_namespace(
@@ -404,9 +403,14 @@ pub(crate) fn cmd(
                 let (editor, _jobs) = userdata!(user_data);
                 let (view, doc) = current!(editor);
                 let sel = doc.selection(view.id);
-                outputs[0] =
-                    extism::Val::I64(sel.ranges()[inputs[0].unwrap_i64() as usize].to() as i64);
-                Ok(())
+                let index = inputs[0].unwrap_i64() as usize;
+                if let Some(x) = sel.ranges().get(index) {
+                    outputs[0] = extism::Val::I64(x.to() as i64);
+
+                    Ok(())
+                } else {
+                    anyhow::bail!("Invalid selection: {index}");
+                }
             },
         )
         .with_function_in_namespace(

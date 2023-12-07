@@ -22,3 +22,13 @@ The `vsplit-sel` function of the `testing` plugin can be called be executing the
 ```
 :plugin testing:vsplit-sel
 ```
+
+## Shortcuts
+
+It's also possible to assign shortcuts keys to plugins:
+
+```toml
+[keys.normal."+"]
+v = ":plugin testing:vsplit-sel"
+o = ":plugin testing:open-sel"
+```
