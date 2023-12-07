@@ -527,12 +527,16 @@ impl std::str::FromStr for MappableCommand {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Some(suffix) = s.strip_prefix(':') {
             let mut typable_command = suffix.split(' ').map(|arg| arg.trim());
-            let name = typable_command
+            let mut name = typable_command
                 .next()
                 .ok_or_else(|| anyhow!("Expected typable command name"))?;
-            let args = typable_command
+            let mut args = typable_command
                 .map(|s| s.to_owned())
                 .collect::<Vec<String>>();
+            if name.contains(':') {
+                args.insert(0, name.to_string());
+                name = "plugin";
+            }
             typed::TYPABLE_COMMAND_MAP
                 .get(name)
                 .map(|cmd| MappableCommand::Typable {

@@ -3173,12 +3173,20 @@ pub(super) fn command_mode(cx: &mut Context) {
                 return;
             }
 
+            let mut name = parts[0];
+            let mut argstart = 1;
+
+            if name.contains(':') {
+                name = "plugin";
+                argstart = 0;
+            }
+
             // Handle typable commands
-            if let Some(cmd) = typed::TYPABLE_COMMAND_MAP.get(parts[0]) {
+            if let Some(cmd) = typed::TYPABLE_COMMAND_MAP.get(name) {
                 let shellwords = Shellwords::from(input);
                 let args = shellwords.words();
 
-                if let Err(e) = (cmd.fun)(cx, &args[1..], event) {
+                if let Err(e) = (cmd.fun)(cx, &args[argstart..], event) {
                     cx.editor.set_error(format!("{}", e));
                 }
             } else if event == PromptEvent::Validate {

@@ -4,23 +4,31 @@ mod bindings {
 
 extern crate extism_pdk;
 
+/// Editor context
 #[derive(Default, Clone, Copy, Debug)]
 pub struct Editor;
 
+/// A text selection
 #[derive(Default, Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Selection(View, u64);
 
+/// A view
 pub use bindings::View;
 
+/// Focus handle, this can be used to focus a view
+/// and return focus once the `Focus` handle goes
+/// out of scope
 pub struct Focus(View, View);
 
 impl Focus {
+    /// Focus `view`
     pub fn new(view: View) -> Focus {
         let old = Editor.view();
         Editor.focus(view);
         Focus(old, view)
     }
 
+    /// Re-focus
     pub fn focus(&self) {
         Editor.focus(self.1);
     }
@@ -33,16 +41,19 @@ impl Drop for Focus {
 }
 
 impl Selection {
+    /// Start index
     pub fn from(self) -> usize {
         let _focus = Focus::new(self.0);
         unsafe { bindings::selection_begin(self.1) as usize }
     }
 
+    /// End index
     pub fn to(self) -> usize {
         let _focus = Focus::new(self.0);
         unsafe { bindings::selection_end(self.1) as usize }
     }
 
+    /// Selection text
     pub fn text(&self) -> Result<String, extism_pdk::Error> {
         let _focus = Focus::new(self.0);
         let from = unsafe { bindings::selection_begin(self.1) as usize };
@@ -56,15 +67,18 @@ impl Selection {
 }
 
 impl Editor {
+    /// Initialize editor context
     pub fn new() -> Editor {
         Editor::default()
     }
 
+    /// Add a new selection
     pub fn add_selection(self, start: usize, end: usize) -> Selection {
         let n = unsafe { bindings::selection_add(start as u64, end as u64) };
         Selection(self.view(), n)
     }
 
+    /// List selections
     pub fn selections(self) -> impl Iterator<Item = Selection> {
         let len = unsafe { bindings::selection_count() };
 
