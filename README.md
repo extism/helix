@@ -18,6 +18,10 @@
 
 ![Screenshot](./screenshot.png)
 
+> [!NOTE]
+> This is an experimental branch of Helix with support for WebAssembly plugins using [Extism](https://github.com/extism/extism). The user and
+> and plugin interfaces are not stable and are likely to change. 
+
 A Kakoune / Neovim inspired editor, written in Rust.
 
 The editing model is very heavily based on Kakoune; during development I found
