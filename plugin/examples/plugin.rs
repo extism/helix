@@ -4,7 +4,7 @@ use extism_pdk::*;
 use helix_plugin::*;
 
 #[plugin_fn]
-pub fn vsplit_sel() -> FnResult<()> {
+pub fn vsplit_copy_sel() -> FnResult<()> {
     for sel in Editor.selections() {
         Editor.execute(":vsplit-new")?;
         Editor.add_selection(0, 0);
