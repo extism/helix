@@ -1,0 +1,21 @@
+[keys.normal."C-a"]
+a = ":plugin a:switch-header"
+v = ":plugin a:vsplit-header"
+h = ":plugin a:hsplit-header"
+
+[keys.normal."C-o"]
+o = ":plugin a:open-sel"
+v = ":plugin a:vsplit-sel"
+h = ":plugin a:hsplit-sel"
+
+[plugins.a]
+functions = [
+  "switch-header",
+  "vsplit-header" ,
+  "hsplit-header",
+  "open-sel",
+  "vsplit-sel",
+  "hsplit-sel"
+]
+[[plugins.a.wasm]]
+path = "./plugin/target/wasm32-unknown-unknown/release/examples/a.wasm"
