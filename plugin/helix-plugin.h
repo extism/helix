@@ -38,6 +38,7 @@ HELIX_HOST_FUNC(uint64_t, len_chars);
 HELIX_HOST_FUNC(uint64_t, len_bytes);
 HELIX_HOST_FUNC(uint64_t, len_lines);
 HELIX_HOST_FUNC(ExtismPointer, language_name);
+HELIX_HOST_FUNC(ExtismPointer, get_path);
 HELIX_HOST_FUNC(void, execute, ExtismPointer);
 
 #ifdef __cplusplus

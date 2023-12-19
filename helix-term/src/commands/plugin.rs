@@ -40,6 +40,7 @@ pub(crate) fn cmd(
     );
     let user_data = extism::UserData::new((cx.editor as *mut Editor, cx.jobs as *mut Jobs));
     let (_view, doc) = current!(cx.editor);
+    let parent = doc.path().and_then(|x| x.parent());
     let path = doc.path().and_then(|x| x.to_str()).unwrap_or_default();
     let (plugin, mut func) = if let Some((a, b)) = args[0].split_once(":") {
         (a.into(), Some(b))
@@ -71,6 +72,11 @@ pub(crate) fn cmd(
             }
             p.manifest.clone()
         }
+    };
+    let manifest = if let Some(parent) = parent {
+        manifest.with_allowed_path(parent, "/")
+    } else {
+        manifest
     };
     let rest = &args[1..];
     let mut plugin = extism::PluginBuilder::new(manifest)
@@ -483,6 +489,20 @@ pub(crate) fn cmd(
                 let (editor, _jobs) = userdata!(user_data);
                 let (_view, doc) = current!(editor);
                 plugin.memory_set_val(&mut outputs[0], doc.language_name().unwrap_or_default())?;
+                Ok(())
+            },
+        )
+        .with_function_in_namespace(
+            EDITOR_ENV,
+            "get_path",
+            [],
+            [extism::PTR],
+            user_data.clone(),
+            |plugin, _inputs, outputs, user_data| {
+                let (editor, _jobs) = userdata!(user_data);
+                let (_view, doc) = current!(editor);
+                let path = doc.path().cloned().unwrap_or_default();
+                plugin.memory_set_val(&mut outputs[0], path.to_string_lossy().as_bytes())?;
                 Ok(())
             },
         )

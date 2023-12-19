@@ -116,6 +116,20 @@ impl Editor {
         Ok(())
     }
 
+    pub fn path(self) -> Result<Option<std::path::PathBuf>, extism_pdk::Error> {
+        let ptr = unsafe { bindings::get_path() };
+        if let Some(ptr) = extism_pdk::Memory::find(ptr) {
+            let res: String = ptr.to()?;
+            ptr.free();
+            if res.is_empty() {
+                return Ok(None);
+            }
+            Ok(Some(std::path::PathBuf::from(res)))
+        } else {
+            Ok(None)
+        }
+    }
+
     pub fn open<P: AsRef<std::path::Path>>(self, filename: P) -> Result<(), extism_pdk::Error> {
         let ptr = extism_pdk::Memory::new(&filename.as_ref().to_str().unwrap_or_default())?;
         unsafe { bindings::open(ptr.offset()) }
